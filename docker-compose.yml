@@ -1,0 +1,459 @@
+
+version: "3.5"
+services:
+
+
+#################### HDFS ######################
+  namenode:
+    image: johannestang/hadoop-namenode:2.0.0-hadoop2.8.5-java8
+    container_name: namenode #f
+    restart: always
+    volumes:
+      - ${DATADIR}/hadoop/namenode:/hadoop/dfs/name
+    environment:
+      - CLUSTER_NAME=NovaCluster
+    env_file:
+      - ./config/hadoop-hive.env
+    ports:
+      - "50070:50070"
+    healthcheck:  #f
+      interval: 5s   #f
+      retries: 100 #f
+    networks:
+      nova_net:
+        ipv4_address: 172.27.1.10
+
+  datanode:
+    image: johannestang/hadoop-datanode:2.0.0-hadoop2.8.5-java8
+    container_name: datanode
+    restart: always
+    volumes:
+      - ${DATADIR}/hadoop/datanode:/hadoop/dfs/data
+    env_file:
+      - ./config/hadoop-hive.env
+    environment:
+      SERVICE_PRECONDITION: "namenode:50070"
+    depends_on:
+      - namenode
+    ports:
+      - "50075:50075"
+    healthcheck:
+      interval: 5s
+      retries: 100
+    networks:
+      nova_net:
+        ipv4_address: 172.27.1.11
+
+#################### SPARK #####################
+  spark-master:
+    image: bde2020/spark-master:2.4.0-hadoop2.7
+    container_name: spark-master
+    ports:
+      - 8080:8080
+      - 7077:7077
+    environment:
+      - CORE_CONF_fs_defaultFS=hdfs://namenode:8020
+    env_file:
+      - ./config/hadoop-hive.env
+    networks:
+      nova_net:
+        ipv4_address: 172.27.1.20
+    
+  spark-worker:
+    image: bde2020/spark-worker:2.4.0-hadoop2.7
+    container_name: spark-worker
+    depends_on:
+      - spark-master
+    environment:
+      - SPARK_MASTER=spark://spark-master:7077
+      - CORE_CONF_fs_defaultFS=hdfs://namenode:8020
+      - HIVE_CORE_CONF_javax_jdo_option_ConnectionURL=jdbc:postgresql://hive-metastore/metastore
+    depends_on:
+      - spark-master
+    ports:
+      - 8081:8081
+    env_file:
+      - ./config/hadoop-hive.env
+    networks:
+      nova_net:
+        ipv4_address: 172.27.1.21
+
+  # spark-worker-2:
+  #   image: bde2020/spark-worker:2.4.0-hadoop2.7
+  #   container_name: spark-worker-2
+  #   depends_on:
+  #     - spark-master
+  #   environment:
+  #     - SPARK_MASTER=spark://spark-master:7077
+  #     - CORE_CONF_fs_defaultFS=hdfs://namenode:8020
+  #     - HIVE_CORE_CONF_javax_jdo_option_ConnectionURL=jdbc:postgresql://hive-metastore/metastore
+  #   depends_on:
+  #     - spark-master
+  #   ports:
+  #     - 8082:8082
+  #   env_file:
+  #     - ./config/hadoop-hive.env
+  #   networks:
+  #     nova_net:
+  #       ipv4_address: 172.27.1.22
+
+
+#################### HIVE ######################
+  hive-server:
+    image: johannestang/hive:2.3.6-postgresql-metastore-s3
+    container_name: hive-server
+    restart: always
+    env_file:
+      - ./config/hadoop-hive.env
+    environment:
+      HIVE_CORE_CONF_javax_jdo_option_ConnectionURL: "jdbc:postgresql://hive-metastore/metastore"
+      SERVICE_PRECONDITION: "hive-metastore:9083"
+    ports:
+      - "10000:10000"
+      - "10002:10002"
+    depends_on:
+      - hive-metastore
+    networks:
+      nova_net:
+        ipv4_address: 172.27.1.30
+
+  hive-metastore:
+    image: johannestang/hive:2.3.6-postgresql-metastore-s3
+    container_name: hive-metastore
+    restart: always
+    env_file:
+      - ./config/hadoop-hive.env
+    command: /opt/hive/bin/hive --service metastore
+    environment:
+      SERVICE_PRECONDITION: "namenode:50070 datanode:50075 hive-metastore-postgresql:5432"
+    ports:
+      - "9083:9083"
+    depends_on:
+      - hive-metastore-postgresql 
+    networks:
+      nova_net:
+        ipv4_address: 172.27.1.31
+  
+  hive-metastore-postgresql:
+    image: bde2020/hive-metastore-postgresql:2.3.0
+    container_name: hive-metastore-postgresql
+    volumes:
+      - ${DATADIR}/hive-metastore:/var/lib/postgresql/data
+    depends_on:
+      - datanode
+    networks:
+      nova_net:
+        ipv4_address: 172.27.1.32
+  
+#################### ZOOKEEPER #################
+  zookeeperKafka:
+    hostname: zookeeperKafka
+    container_name: zookeeperKafka
+    image: 'bitnami/zookeeper:latest'
+    ports:
+      - "2182:2182"
+    environment:
+      - ALLOW_ANONYMOUS_LOGIN=yes
+      - ZOO_PORT_NUMBER=2182
+    networks: 
+      nova_net:
+        ipv4_address: 172.27.1.40
+
+  zookeeperNifi:
+    hostname: zookeeperNifi
+    container_name: zookeeperNifi
+    image: 'bitnami/zookeeper:latest'
+    ports:
+      - "2181:2181"
+    environment:
+      - ALLOW_ANONYMOUS_LOGIN=yes
+    networks: 
+      nova_net:
+        ipv4_address: 172.27.1.41
+
+  
+#################### KAFKA #####################
+  kafka:
+    container_name: kafka
+    image: wurstmeister/kafka:2.12-2.5.0
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_ADVERTISED_HOST_NAME: 172.27.1.11
+      KAFKA_ZOOKEEPER_CONNECT: zookeeperKafka:2182
+    networks:
+      nova_net:
+        ipv4_address: 172.27.1.50
+
+#################### NIFI ######################
+  nifi:
+    image: apache/nifi:1.11.4
+    container_name: nifi
+    ports:
+      - "9090:9090" # Unsecured HTTP Web Port
+    environment:
+      - NIFI_WEB_HTTP_PORT=9090
+      - NIFI_CLUSTER_IS_NODE=true
+      - NIFI_CLUSTER_NODE_PROTOCOL_PORT=8082
+      - NIFI_ZK_CONNECT_STRING=zookeeperNifi:2181
+      - NIFI_ELECTION_MAX_WAIT=1 min
+    volumes:
+        - ${DATADIR}/nifi_data:/home/nifi/data
+        #- ${DATADIR}/nifi_db:/opt/nifi/nifi-current/database_repository
+        #- ${DATADIR}/nifi_flowfile:/opt/nifi/nifi-current/flowfile_repository
+        #- ${DATADIR}/nifi_content:/opt/nifi/nifi-current/content_repository
+        #- ${DATADIR}/nifi_provenance:/opt/nifi/nifi-current/provenance_repository 
+        #- ${DATADIR}/nifi_state:/opt/nifi/nifi-current/state
+        #- ${DATADIR}/nifi_conf:/opt/nifi/nifi-current/conf
+
+      # - /home/fedesardo/nifi_v/nifi_data:/home/nifi/data
+      # - /home/fedesardo/nifi_v/nifi_db:/opt/nifi/nifi-current/database_repository
+      # - /home/fedesardo/nifi_v/nifi_flowfile:/opt/nifi/nifi-current/flowfile_repository
+      # - /home/fedesardo/nifi_v/nifi_content:/opt/nifi/nifi-current/content_repository
+      # - /home/fedesardo/nifi_v/nifi_provenance:/opt/nifi/nifi-current/provenance_repository 
+      # - /home/fedesardo/nifi_v/nifi_state:/opt/nifi/nifi-current/state
+
+        #- ./nifi_state:/opt/nifi/nifi-current/state
+        # - ./nifi_db:/opt/nifi/nifi-current/database_repository
+        # - ./nifi_flowfile:/opt/nifi/nifi-current/flowfile_repository
+        # - ./nifi_content:/opt/nifi/nifi-current/content_repository
+        # - ./nifi_provenance:/opt/nifi/nifi-current/provenance_repository   
+    networks:
+      nova_net:
+        ipv4_address: 172.27.1.60
+
+  nifi-registry:
+    image: apache/nifi-registry:latest
+    container_name: nifi-registry
+    ports:
+      - "18080:18080" # UI
+    networks:
+      nova_net:
+        ipv4_address: 172.27.1.61
+        
+#################### ZEPPELING #################
+
+  zeppelin:
+    image: apache/zeppelin:0.8.0
+    container_name: zeppelin
+    ports:
+        - "9999:8080"
+    volumes:
+        - ${DATADIR}/spark:/zeppelin/spark
+        - ${DATADIR}/notebooks:/zeppelin/notebook
+    environment:
+        MASTER: "spark://spark-master:7077"
+        SPARK_MASTER: "spark://spark-master:7077"
+        SPARK_HOME: "/zeppelin/spark"
+    networks:
+      nova_net:
+        ipv4_address: 172.27.1.70
+
+#################### HUE #######################
+  hue:
+    image: johannestang/hue:4.5.0-presto326
+    container_name: hue
+    restart: always
+    depends_on:
+      - hue-postgres
+    ports:
+      - "8888:8888"
+    volumes:
+      - ./config/hue.ini:/usr/share/hue/desktop/conf/z-hue.ini
+    networks:
+      nova_net:
+        ipv4_address: 172.27.1.80
+
+  hue-postgres:
+    image: postgres:10
+    container_name: hue-postgres
+    restart: always
+    environment:
+      POSTGRES_DB: ${HUE_POSTGRES_DB}
+      POSTGRES_PASSWORD: ${HUE_POSTGRES_PASSWORD}
+      POSTGRES_USER: ${HUE_POSTGRES_USER}
+    volumes:
+      - ${DATADIR}/hue/postgres:/var/lib/postgresql/data
+    networks:
+      nova_net:
+        ipv4_address: 172.27.1.81
+
+#################### DATABASES ##################
+  database:
+    image: "postgres"
+    container_name: nova-postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_USER: ${POSTGRES_USER}
+    ports:
+      - "5433:5432"
+    volumes:
+      - database-data:/var/lib/postgresql/data/
+    networks:
+      nova_net:
+        ipv4_address: 172.27.1.90
+  
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2019-CU3-ubuntu-18.04
+    user: '0:0'
+    container_name: sqlserver2019
+    ports:
+      - 1433:1433
+    environment:
+      ACCEPT_EULA: Y
+      SA_PASSWORD: PasswordO1.
+      MSSQL_PID: Express
+    volumes:
+      - ${DATADIR}/sqlserver-data:/var/opt/mssql
+    networks:
+      nova_net:
+        ipv4_address: 172.27.1.91
+      
+#################### PROMETHEUS & INFLUXDB #######
+  
+  prometheus:
+    image: prom/prometheus
+    container_name: prometheus
+    restart: always
+    volumes:
+      - ./config/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - 9091:9090
+    networks:
+      nova_net:
+        ipv4_address: 172.27.1.100
+
+  influxdb:
+    image: influxdb:1.8-alpine
+    container_name: influxdb
+    restart: always
+    ports:
+        - 8086:8086
+    volumes:
+      - influxdb-volume:/vol01/Docker/monitoring
+    environment:
+      - INFLUXDB_DB=telegraf
+      - INFLUXDB_USER=telegraf
+      - INFLUXDB_ADMIN_ENABLED=true
+      - INFLUXDB_ADMIN_USER=nova
+      - INFLUXDB_ADMIN_PASSWORD=nova123 
+    networks:
+      nova_net:
+        ipv4_address: 172.27.1.101
+
+  telegraf:
+    image: telegraf
+    container_name: telegraf
+    restart: always
+    extra_hosts:
+      - "influxdb:172.27.1.50"
+    environment:
+      HOST_PROC: /rootfs/proc
+      HOST_SYS: /rootfs/sys
+      HOST_ETC: /rootfs/etc
+    volumes:
+      - ./config/telegraf/telegraf.conf:/etc/telegraf/telegraf.conf:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /sys:/rootfs/sys:ro
+      - /proc:/rootfs/proc:ro
+      - /etc:/rootfs/etc:ro
+    networks:
+      nova_net:
+        ipv4_address: 172.27.1.102
+
+############################# GRAFANA #################################
+
+  grafana:
+    image: grafana/grafana
+    container_name: grafana
+    restart: always
+    environment:
+      GF_INSTALL_PLUGINS: "grafana-clock-panel,grafana-simple-json-datasource"
+    ports:
+      - 3000:3000
+    links:
+        - influxdb:influxdb
+    volumes: 
+        - grafana-volume:/vol1/Docker/monitoring    
+    networks:
+      nova_net:
+        ipv4_address: 172.27.1.200  
+
+
+#################### ELASTICSTACK #############
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.4.0
+    container_name: elasticsearch
+    environment:
+      - xpack.security.enabled=false
+      - discovery.type=single-node
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536
+        hard: 65536
+    cap_add:
+      - IPC_LOCK
+    volumes:
+      - elasticsearch-data:/usr/share/elasticsearch/data
+    ports:
+      - 9200:9200
+      - 9300:9300
+    networks:
+      nova_net:
+        ipv4_address: 172.27.1.201
+
+  kibana:
+    container_name: kibana
+    image: docker.elastic.co/kibana/kibana:7.4.0
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    ports:
+      - 5601:5601
+    depends_on:
+      - elasticsearch
+    networks:
+      nova_net:
+        ipv4_address: 172.27.1.202
+
+  logstash:
+    image: logstash:7.4.0
+    container_name: logstash
+      #context: logstash/
+      #args:
+       # ELK_VERSION: $ELK_VERSION
+    volumes:
+      - ./config/logstash/logstash.yml:/usr/share/logstash/config/logstash.yml
+      - ./config/logstash/pipeline:/usr/share/logstash/pipeline
+    ports:
+      - "5044:5044"
+      - "5000:5000/tcp"
+      - "5000:5000/udp"
+      - "9600:9600"
+    environment:
+      LS_JAVA_OPTS: "-Xmx256m -Xms256m"
+    depends_on:
+      - elasticsearch
+    networks:
+      nova_net:
+       ipv4_address: 172.27.1.203
+
+
+#################### NETWORKING ################
+networks:
+  nova_net:
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.27.0.0/16
+
+volumes:
+  database-data:
+  grafana-volume:
+  influxdb-volume:
+  elasticsearch-data:
+#  nifi-state:
+   # external: true
