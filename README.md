@@ -27,11 +27,12 @@ This platform contains:
 - Apache Kafka
 - Apache Hive
 - Apache Zookeeper
-- Apache Sqoop (not working yet)
 - Grafana
 - Prometheus
 - Postgres
-- 
+- Elasticsearch
+- Kibana
+- HBase 
 
 # Environment
 This project was tested and runs using this software version:
@@ -43,7 +44,10 @@ This project was tested and runs using this software version:
 - Java Version: openjdk version "1.8.0_292"
 
 # Installation
-Before moving forward be sure that you met all the system requirement described in the [environment](#environment) section.
+Before moving forward be sure that you met (at least) all the system requirement described in the [environment](#environment) section.
+
+If you need to install docker engine on your machine you can refer to this link.  
+If you need to install docker-compose on your machine you can refer to this link.
 
 Once the project was downloaded be sure that you are placed in the project root directory and execute:
 

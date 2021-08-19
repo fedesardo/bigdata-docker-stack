@@ -476,5 +476,7 @@ volumes:
   grafana-volume:
   influxdb-volume:
   elasticsearch-data:
+  hbase_data:
+  hbase_zookeeper_data:
 #  nifi-state:
    # external: true
