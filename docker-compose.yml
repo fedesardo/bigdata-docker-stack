@@ -146,7 +146,7 @@ services:
         ipv4_address: 172.27.1.32
   
 #################### ZOOKEEPER #################
-  zookeeperKafka:
+  zookeeper:
     hostname: zookeeperKafka
     container_name: zookeeperKafka
     image: 'bitnami/zookeeper:latest'
@@ -159,28 +159,24 @@ services:
       nova_net:
         ipv4_address: 172.27.1.40
 
-  zookeeperNifi:
-    hostname: zookeeperNifi
-    container_name: zookeeperNifi
-    image: 'bitnami/zookeeper:latest'
-    ports:
-      - "2181:2181"
-    environment:
-      - ALLOW_ANONYMOUS_LOGIN=yes
-    networks: 
-      nova_net:
-        ipv4_address: 172.27.1.41
-
   
 #################### KAFKA #####################
   kafka:
+    image: confluentinc/cp-kafka:5.5.0
     container_name: kafka
-    image: wurstmeister/kafka:2.12-2.5.0
+    networks: 
+      - nova-intermedio
     ports:
       - "9092:9092"
+      - "29092:29092"
+    depends_on:
+      - zookeeper
     environment:
-      KAFKA_ADVERTISED_HOST_NAME: 172.27.1.11
-      KAFKA_ZOOKEEPER_CONNECT: zookeeperKafka:2182
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,CONNECTIONS_FROM_HOST://localhost:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONNECTIONS_FROM_HOST:PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
     networks:
       nova_net:
         ipv4_address: 172.27.1.50
@@ -193,31 +189,9 @@ services:
       - "9090:9090" # Unsecured HTTP Web Port
     environment:
       - NIFI_WEB_HTTP_PORT=9090
-      - NIFI_CLUSTER_IS_NODE=true
       - NIFI_CLUSTER_NODE_PROTOCOL_PORT=8082
-      - NIFI_ZK_CONNECT_STRING=zookeeperNifi:2181
-      - NIFI_ELECTION_MAX_WAIT=1 min
     volumes:
         - ${DATADIR}/nifi_data:/home/nifi/data
-        #- ${DATADIR}/nifi_db:/opt/nifi/nifi-current/database_repository
-        #- ${DATADIR}/nifi_flowfile:/opt/nifi/nifi-current/flowfile_repository
-        #- ${DATADIR}/nifi_content:/opt/nifi/nifi-current/content_repository
-        #- ${DATADIR}/nifi_provenance:/opt/nifi/nifi-current/provenance_repository 
-        #- ${DATADIR}/nifi_state:/opt/nifi/nifi-current/state
-        #- ${DATADIR}/nifi_conf:/opt/nifi/nifi-current/conf
-
-      # - /home/fedesardo/nifi_v/nifi_data:/home/nifi/data
-      # - /home/fedesardo/nifi_v/nifi_db:/opt/nifi/nifi-current/database_repository
-      # - /home/fedesardo/nifi_v/nifi_flowfile:/opt/nifi/nifi-current/flowfile_repository
-      # - /home/fedesardo/nifi_v/nifi_content:/opt/nifi/nifi-current/content_repository
-      # - /home/fedesardo/nifi_v/nifi_provenance:/opt/nifi/nifi-current/provenance_repository 
-      # - /home/fedesardo/nifi_v/nifi_state:/opt/nifi/nifi-current/state
-
-        #- ./nifi_state:/opt/nifi/nifi-current/state
-        # - ./nifi_db:/opt/nifi/nifi-current/database_repository
-        # - ./nifi_flowfile:/opt/nifi/nifi-current/flowfile_repository
-        # - ./nifi_content:/opt/nifi/nifi-current/content_repository
-        # - ./nifi_provenance:/opt/nifi/nifi-current/provenance_repository   
     networks:
       nova_net:
         ipv4_address: 172.27.1.60
