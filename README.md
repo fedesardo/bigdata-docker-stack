@@ -159,7 +159,7 @@ Although refering a container using the ip number is not necesary since you can 
 - Grafana: <http://localhost:3000>
 - Kibana: http:// localhost:5601
 - Elasticsearch: <http://localhost:9200/>
-- NetData: <htpp://localhost:19999>
+- NetData: <http://localhost:19999>
 
 # known issues
 
