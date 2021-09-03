@@ -1,14 +1,17 @@
 ![novakorp](./img/logo_horizontal.png)
 
-
 # Table of content
+
 - [Table of content](#table-of-content)
 - [Introduction](#introduction)
 - [Environment](#environment)
 - [Installation](#installation)
+- [Container's Info](#containers-info)
+  - [Nifi](#nifi)
 - [IP's assignment](#ips-assignment)
 - [URL's](#urls)
 - [known issues](#known-issues)
+
 # Introduction
 
 The main goal of this project is to generate a BIG DATA infrastructure to use locally and make it available for any member of Novakorp using docker-compose. If you are not familiar with docker or docker-compose you can visit this link for more detailed information.
@@ -61,9 +64,10 @@ docker-compose up -d
 ```
 
 This command will download all the required images and then a container for any described service will be created.  
+  
 You must be aware of this will consume a lot of RAM of your computer so if you have 8gb or less creating the full stack is not recommended.
 
-In order to created containers for the services that you need you can run depending on your needs:
+In order to created containers depending on your needs you can run:
 
 ```bash
  docker-compose up -d namenode
@@ -85,12 +89,17 @@ In order to created containers for the services that you need you can run depend
  docker-compose up -d prometheus
  docker-compose up -d influxdb
  docker-compose up -d telegraf
+ docker-compose up -d netdata
  docker-compose up -d grafana
  docker-compose up -d elasticsearch
  docker-compose up -d kibana
  docker-compose up -d logstash
  docker-compose up -d hbase
 ```
+
+# Container's Info
+
+## Nifi
 
 Moving data from Apache Nifi to HDFS is one of the most common uses cases. In that case you will need to place the core-site.xml and hdfs-site.xml inside the nifi container.
 
@@ -106,7 +115,6 @@ The file will be placed inside the nifi container in the */opt/nifi/hdfs-config*
 
 - Perhaps you should add executable permissions to the file.
 - The script will only copy the files. Configure the nifi processor is up to you.
-
 
 # IP's assignment
 
@@ -133,6 +141,7 @@ Although refering a container using the ip number is not necesary since you can 
 - 172.27.1.100 ---> prometheus
 - 172.27.1.101 ---> influxdb
 - 172.27.1.102 ---> telegraf
+- 172.27.1.103 ---> netdata
 - 172.27.1.200 ---> grafana
 - 172.27.1.201 ---> elasticsearch
 - 172.27.1.202 ---> kibana
@@ -140,17 +149,19 @@ Although refering a container using the ip number is not necesary since you can 
 
 # URL's
 
-- Hadoop namenode: http://localhost:50070
-- Apache Nifi: http://localhost:9090
-- Apache Nifi Registry : http://localhost:18080/nifi-registry
-- Hue: http://localhost:8888
-- Spark: http://localhost:8080
-- Zeppelin: http://localhost:9999
-- Hive: http://localhost:10002/
-- Grafana: http://localhost:3000
+- Hadoop namenode: <http://localhost:50070>
+- Apache Nifi: <http://localhost:9090>
+- Apache Nifi Registry : <http://localhost:18080/nifi-registry>
+- Hue: <http://localhost:8888>
+- Spark: <http://localhost:8080>
+- Zeppelin: <http://localhost:9999>
+- Hive: <http://localhost:10002/>
+- Grafana: <http://localhost:3000>
 - Kibana: http:// localhost:5601
-- Elasticsearch: http://localhost:9200/
+- Elasticsearch: <http://localhost:9200/>
+- NetData: <htpp://localhost:19999>
 
 # known issues
- - The nifi container would not persist any kind of data if you remove the container.
- - Logstash container is not working.
+
+- The nifi container would not persist any kind of data if you remove the container.
+- Logstash container is not working.

@@ -334,6 +334,29 @@ services:
       nova_net:
         ipv4_address: 172.27.1.102
 
+  netdata:
+    container_name: netdata
+    image: netdata/netdata
+    restart: always
+    ports: 
+      - 19999:19999
+    cap_add: 
+      - SYS_PTRACE
+    security_opt: 
+      - apparmor:unconfined
+    volumes: 
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    environment: 
+      - PGID=133
+      - VIRTUAL_PORT=19999
+      - DOCKER_HOST=proxy:2375
+      - VIRTUALIZATION=kvm
+    networks:
+      nova_net:
+        ipv4_address: 172.27.1.103
+
 ############################# GRAFANA #################################
 
   grafana:
@@ -413,6 +436,7 @@ services:
       nova_net:
        ipv4_address: 172.27.1.203
 
+#################### HBASE ################
   hbase:
     image: bde2020/hbase-standalone:1.0.0-hbase1.2.6
     container_name: hbase
