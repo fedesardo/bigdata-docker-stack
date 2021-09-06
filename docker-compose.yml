@@ -53,6 +53,9 @@ services:
       - CORE_CONF_fs_defaultFS=hdfs://namenode:8020
     env_file:
       - ./config/hadoop-hive.env
+    healthcheck:
+      interval: 5s
+      retries: 100 
     networks:
       nova_net:
         ipv4_address: 172.27.1.20
@@ -72,6 +75,9 @@ services:
       - 8081:8081
     env_file:
       - ./config/hadoop-hive.env
+    healthcheck:
+      interval: 5s
+      retries: 100
     networks:
       nova_net:
         ipv4_address: 172.27.1.21
@@ -91,6 +97,9 @@ services:
   #     - 8082:8082
   #   env_file:
   #     - ./config/hadoop-hive.env
+  #  healthcheck:
+  #    interval: 5s
+  #    retries: 100
   #   networks:
   #     nova_net:
   #       ipv4_address: 172.27.1.22
@@ -145,8 +154,8 @@ services:
   
 #################### ZOOKEEPER #################
   zookeeper:
-    hostname: zookeeperKafka
-    container_name: zookeeperKafka
+    hostname: zookeeper
+    container_name: zookeeper
     image: 'bitnami/zookeeper:latest'
     ports:
       - "2182:2182"
@@ -162,8 +171,6 @@ services:
   kafka:
     image: confluentinc/cp-kafka:5.5.0
     container_name: kafka
-    networks: 
-      - nova-intermedio
     ports:
       - "9092:9092"
       - "29092:29092"
@@ -203,10 +210,11 @@ services:
       nova_net:
         ipv4_address: 172.27.1.61
         
-#################### ZEPPELING #################
+#################### ZEPPELIN #################
 
   zeppelin:
-    image: apache/zeppelin:0.8.0
+ #   image: apache/zeppelin:0.8.0
+    build: ./zeppelin
     container_name: zeppelin
     ports:
         - "9999:8080"
@@ -216,7 +224,9 @@ services:
     environment:
         MASTER: "spark://spark-master:7077"
         SPARK_MASTER: "spark://spark-master:7077"
-        SPARK_HOME: "/zeppelin/spark"
+       # SPARK_HOME: "spark://spark-master/spark"
+        CORE_CONF_fs_defaultFS: "hdfs://namenode:8020"
+        ZEPPELIN_ADDR: "0.0.0.0"
     networks:
       nova_net:
         ipv4_address: 172.27.1.70
