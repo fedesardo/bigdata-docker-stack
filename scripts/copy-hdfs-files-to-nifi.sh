@@ -10,3 +10,4 @@ echo "                                      |_|    ";
 echo "This script will copy core-site.xml and hdfs-site.xml into the nifi container"
 
 docker cp ../config/hdfs/. nifi:/opt/nifi/hdfs-config
+docker cp ../config/hive/. nifi:/opt/nifi/hive-config
