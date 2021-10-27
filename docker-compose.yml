@@ -188,7 +188,7 @@ services:
 
 #################### NIFI ######################
   nifi:
-    image: apache/nifi:1.11.4
+    image: apache/nifi:1.13.2
     container_name: nifi
     ports:
       - "9090:9090" # Unsecured HTTP Web Port
