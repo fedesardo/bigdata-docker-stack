@@ -5,7 +5,7 @@ services:
 #################### HDFS ######################
   namenode:
     image: johannestang/hadoop-namenode:2.0.0-hadoop2.8.5-java8
-    container_name: namenode #f
+    container_name: namenode
     restart: always
     volumes:
       - ${DATADIR}/hadoop/namenode:/hadoop/dfs/name
@@ -15,9 +15,9 @@ services:
       - ./config/hadoop-hive.env
     ports:
       - "50070:50070"
-    healthcheck:  #f
-      interval: 5s   #f
-      retries: 100 #f
+    healthcheck:
+      interval: 5s
+      retries: 100
     networks:
       nova_net:
         ipv4_address: 172.27.1.10
@@ -50,6 +50,8 @@ services:
     ports:
       - 8080:8080
       - 7077:7077
+    volumes:
+      - ${DATADIR}/spark-files:/root/
     environment:
       - CORE_CONF_fs_defaultFS=hdfs://namenode:8020
     env_file:
@@ -272,7 +274,7 @@ services:
     ports:
       - "5433:5432"
     volumes:
-      - database-data:/var/lib/postgresql/data/
+      - ${DATADIR}/pgdatabase/:/var/lib/postgresql/data/
     networks:
       nova_net:
         ipv4_address: 172.27.1.90
@@ -314,7 +316,8 @@ services:
     ports:
         - 8086:8086
     volumes:
-      - influxdb-volume:/vol01/Docker/monitoring
+#      - influxdb-volume:/vol01/Docker/monitoring
+       - ${DATADIR}/influxdb:/vol01/Docker/monitoring
     environment:
       - INFLUXDB_DB=telegraf
       - INFLUXDB_USER=telegraf
@@ -381,7 +384,8 @@ services:
     links:
         - influxdb:influxdb
     volumes: 
-        - grafana-volume:/vol1/Docker/monitoring    
+#        - grafana-volume:/vol1/Docker/monitoring
+        - ${DATADIR}/grafana:/vol1/Docker/monitoring    
     networks:
       nova_net:
         ipv4_address: 172.27.1.200  
@@ -404,7 +408,8 @@ services:
     cap_add:
       - IPC_LOCK
     volumes:
-      - elasticsearch-data:/usr/share/elasticsearch/data
+#      - elasticsearch-data:/usr/share/elasticsearch/data
+      - ${DATADIR}/elasticsearch:/usr/share/elasticsearch/data
     ports:
       - 9200:9200
       - 9300:9300
@@ -452,8 +457,10 @@ services:
     image: bde2020/hbase-standalone:1.0.0-hbase1.2.6
     container_name: hbase
     volumes:
-      - hbase_data:/hbase-data
-      - hbase_zookeeper_data:/zookeeper-data
+     # - hbase_data:/hbase-data
+       - ${DATADIR}/hbase_data:/hbase-data
+      #- hbase_zookeeper_data:/zookeeper-data
+       - ${DATADIR}/hbase_zookeeper_data:/zookeeper-data
     ports:
       - 16000:16000
       - 16010:16010
@@ -478,12 +485,12 @@ networks:
       config:
         - subnet: 172.27.0.0/16
 
-volumes:
-  database-data:
-  grafana-volume:
-  influxdb-volume:
-  elasticsearch-data:
-  hbase_data:
-  hbase_zookeeper_data:
+#volumes:
+# database-data:
+# grafana-volume:
+# influxdb-volume:
+#elasticsearch-data:
+#  hbase_data:
+# hbase_zookeeper_data:
 #  nifi-state:
-   # external: true
+# external: true
