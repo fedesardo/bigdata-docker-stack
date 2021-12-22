@@ -54,8 +54,8 @@ In order to continue using this project you must have docker engine and docker-c
 
 Before moving forward be sure that you met (at least) all the system requirement described in the [environment](#environment) section.
 
-If you need to install docker engine on your machine you can refer to this link(https://docs.docker.com/engine/install/ubuntu/).  
-If you need to install docker-compose on your machine you can refer to this link(https://docs.docker.com/compose/install/).
+If you need to install docker engine on your machine you can refer to this [link](https://docs.docker.com/engine/install/ubuntu/) 
+If you need to install docker-compose on your machine you can refer to this [link](https://docs.docker.com/compose/install/)
 
 Once the project was downloaded be sure that you are placed in the project root directory and execute:
 
